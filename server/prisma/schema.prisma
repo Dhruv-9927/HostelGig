@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   // 'hirer', 'solver', 'both'
+  avatar    String?
+  skills    String?  // Stored as JSON string or comma-separated
+  rating    Float    @default(0)
+  reviews   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasksPosted    Task[]    @relation("PostedTasks")
+  tasksAssigned  Task[]    @relation("AssignedTasks")
+  offers         Offer[]
+  sentMessages   Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+  reviewsGiven   Review[]  @relation("ReviewsGiven")
+  reviewsReceived Review[] @relation("ReviewsReceived")
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  price       Float
+  deadline    DateTime
+  category    String
+  status      String   @default("Open") // 'Open', 'In Progress', 'Delivered', 'Completed', 'Cancelled', 'Disputed'
+  fileUrl     String?  // For task attachments
+  
+  // Printing specific fields (stored as JSON string if needed, or separate columns)
+  printColor  Boolean?
+  printSides  String?
+  printBinding Boolean?
+  printCopies Int?
+  dropOffLocation String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  authorId    String
+  author      User     @relation("PostedTasks", fields: [authorId], references: [id])
+  
+  assignedToId String?
+  assignedTo   User?    @relation("AssignedTasks", fields: [assignedToId], references: [id])
+
+  offers      Offer[]
+  messages    Message[]
+}
+
+model Offer {
+  id        String   @id @default(uuid())
+  price     Float
+  message   String
+  status    String   @default("Pending") // 'Pending', 'Accepted', 'Rejected'
+  createdAt DateTime @default(now())
+
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id])
+  
+  solverId  String
+  solver    User     @relation(fields: [solverId], references: [id])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  senderId  String
+  sender    User     @relation("SentMessages", fields: [senderId], references: [id])
+  
+  receiverId String
+  receiver  User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  
+  taskId    String?
+  task      Task?    @relation(fields: [taskId], references: [id])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  rating    Int
+  comment   String
+  createdAt DateTime @default(now())
+
+  fromUserId String
+  fromUser   User     @relation("ReviewsGiven", fields: [fromUserId], references: [id])
+  
+  toUserId   String
+  toUser     User     @relation("ReviewsReceived", fields: [toUserId], references: [id])
+}
